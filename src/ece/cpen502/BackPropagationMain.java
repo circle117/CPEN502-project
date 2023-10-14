@@ -41,6 +41,9 @@ public class BackPropagationMain {
         System.out.print("Do you want to record the weights in an csv file? (Y/N) ");
         String ifRecord = scanner.next();
 
+        System.out.print("How many times do you want to run? ");
+        int times = Integer.parseInt(scanner.next());
+
         // load the dataset
         Scanner fileScanner = new Scanner(dataset);
         fileScanner.next();
@@ -64,7 +67,7 @@ public class BackPropagationMain {
         int epoch;
         double totalEpochs = 0;
         ArrayList<List<Double>> totalList = new ArrayList<>();
-        while (cnt<10) {
+        while (cnt<times) {
             List<Double> list = new ArrayList<>();
 
             NeuralNet net = new NeuralNet(2, 4, 0.2, momentum,
@@ -78,7 +81,6 @@ public class BackPropagationMain {
                     error += net.train(X[i], target[i]);
                 }
                 epoch++;
-                error /= 4;
                 if (ifRecord.equals("Y"))
                     list.add(error);
                     // writer.write(epoch+","+error+"\n");
@@ -94,7 +96,7 @@ public class BackPropagationMain {
 
         // record
         if (ifRecord.equals("Y")) {
-            File file = new File("./data/result/"+inputFileName+"Loss-momentum"+momentum+"test.csv");
+            File file = new File("./data/result/"+inputFileName+"Loss-momentum"+momentum+".csv");
             if (file.exists())
                 file.delete();
             writer = new FileWriter(file);
@@ -115,7 +117,7 @@ public class BackPropagationMain {
                     else
                         writer.write(","+totalList.get(i).get(j));
                 }
-                if (cnt==10)
+                if (cnt==times)
                     break;
                 writer.write("\n");
                 j++;

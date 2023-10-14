@@ -18,8 +18,8 @@ public class NeuralNet implements NeuralNetInterface {
     private double argB;
     private double[][] weightsInput;
     private double[] weightsHidden;
-    private double[][] preWeightsInput;
-    private double[] preWeightsHidden;
+    private double[][] deltaWeightsInput;
+    private double[] deltaWeightsHidden;
     private double[] middleRes;
 
     /**
@@ -110,9 +110,9 @@ public class NeuralNet implements NeuralNetInterface {
     @Override
     public void zeroWeights() {
         this.weightsInput = new double[argNumInputs+1][argNumHidden];
-        this.preWeightsInput = new double[argNumInputs+1][argNumHidden];
+        this.deltaWeightsInput = new double[argNumInputs+1][argNumHidden];
         this.weightsHidden = new double[argNumHidden+1];
-        this.preWeightsHidden = new double[argNumHidden+1];
+        this.deltaWeightsHidden = new double[argNumHidden+1];
     }
 
     @Override
@@ -128,24 +128,32 @@ public class NeuralNet implements NeuralNetInterface {
         return 0.5 * Math.pow(actualValue - predictedValue, 2);
     }
 
+    /**
+     * back propagation calculation
+     * @param argValue target value
+     * @param y predicted value
+     * @param X input matrix
+     */
     @Override
     public void backPropagation(double argValue, double y, double [] X) {
         // copy the previous weights
-        double[] tempHidden = Arrays.copyOf(weightsHidden, weightsHidden.length);
-        double[][] tempInput = new double[weightsInput.length][weightsInput[0].length];
+        double[] tempHidden = new double[deltaWeightsHidden.length];
+        double[][] tempInput = new double[deltaWeightsInput.length][deltaWeightsInput[0].length];
         for (int i=0; i<weightsInput.length; i++)
             tempInput[i] = Arrays.copyOf(weightsInput[i], weightsInput[i].length);
 
         // calculate the error signal
-        double errorSignal = (argValue - y) * (-1.0/(argB-argA) * (y-argA) * (y-argB));
+        double errorSignal = (argValue - y) * ((-1.0/(argB-argA)) * (y-argA) * (y-argB));
 
         // BP for the hidden layer
         for (int i=0; i<argNumHidden; i++) {
-            weightsHidden[i] += argMomentumTerm * (weightsHidden[i]-preWeightsHidden[i])
+            tempHidden[i] = argMomentumTerm * (deltaWeightsHidden[i]) + argLearningRate * errorSignal * middleRes[i];
+            weightsHidden[i] += argMomentumTerm * (deltaWeightsHidden[i])
                     + argLearningRate * errorSignal * middleRes[i];
         }
-        weightsHidden[argNumHidden] += argMomentumTerm * (weightsHidden[argNumHidden] - preWeightsHidden[argNumHidden])
-                + argLearningRate * errorSignal * bias;
+        tempHidden[argNumHidden] = argMomentumTerm * (deltaWeightsHidden[argNumHidden]) +
+                argLearningRate * errorSignal * bias;
+        weightsHidden[argNumHidden] += tempHidden[argNumHidden];
 
         // calculate the error signal
         double[] errorSignals = new double[argNumHidden];
@@ -154,16 +162,19 @@ public class NeuralNet implements NeuralNetInterface {
 
         // BP for the input layer
         for (int i=0; i<argNumHidden; i++) {
-            for (int j=0; j<argNumInputs; j++)
-                weightsInput[j][i] += argMomentumTerm * (weightsInput[j][i] - preWeightsInput[j][i])
+            for (int j=0; j<argNumInputs; j++) {
+                tempInput[j][i] = argMomentumTerm * (deltaWeightsInput[j][i])
                         + argLearningRate * errorSignals[i] * X[j];
-            weightsInput[argNumInputs][i] += argMomentumTerm * (weightsInput[argNumInputs][i] - preWeightsInput[argNumInputs][i])
+                weightsInput[j][i] += tempInput[j][i];
+            }
+            tempInput[argNumInputs][i] = argMomentumTerm * (deltaWeightsInput[argNumInputs][i])
                     + argLearningRate * errorSignals[i] * bias;
+            weightsInput[argNumInputs][i] += tempInput[argNumInputs][i];
         }
 
         // copy the weights
-        preWeightsHidden = Arrays.copyOf(tempHidden, tempHidden.length);
+        deltaWeightsHidden = Arrays.copyOf(tempHidden, tempHidden.length);
         for (int i=0; i<weightsInput.length; i++)
-            preWeightsInput[i] = Arrays.copyOf(tempInput[i], tempInput[i].length);
+            deltaWeightsInput[i] = Arrays.copyOf(tempInput[i], tempInput[i].length);
     }
 }
