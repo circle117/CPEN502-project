@@ -40,5 +40,4 @@ public interface NeuralNetInterface extends CommonInterface{
      */
     double squareDifference(double actualValue, double calculatedValue);
 
-    void backPropagation(double argValue, double y, double [] X);
 }

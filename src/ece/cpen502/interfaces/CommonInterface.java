@@ -26,7 +26,7 @@ public interface CommonInterface {
     double train(double [] X, double argValue);
 
     /**
-     * A method to write either a LUT or weights of an neural net to a file
+     * A method to write either a LUT or weights of a neural net to a file
      * @param argFile of type File.
      */
     void save(File argFile) throws IOException;

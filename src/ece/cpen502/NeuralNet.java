@@ -134,8 +134,7 @@ public class NeuralNet implements NeuralNetInterface {
      * @param y predicted value
      * @param X input matrix
      */
-    @Override
-    public void backPropagation(double argValue, double y, double [] X) {
+    private void backPropagation(double argValue, double y, double [] X) {
         // copy the previous weights
         double[] tempHidden = new double[deltaWeightsHidden.length];
         double[][] tempInput = new double[deltaWeightsInput.length][deltaWeightsInput[0].length];
@@ -148,8 +147,7 @@ public class NeuralNet implements NeuralNetInterface {
         // BP for the hidden layer
         for (int i=0; i<argNumHidden; i++) {
             tempHidden[i] = argMomentumTerm * (deltaWeightsHidden[i]) + argLearningRate * errorSignal * middleRes[i];
-            weightsHidden[i] += argMomentumTerm * (deltaWeightsHidden[i])
-                    + argLearningRate * errorSignal * middleRes[i];
+            weightsHidden[i] += tempHidden[i];
         }
         tempHidden[argNumHidden] = argMomentumTerm * (deltaWeightsHidden[argNumHidden]) +
                 argLearningRate * errorSignal * bias;
