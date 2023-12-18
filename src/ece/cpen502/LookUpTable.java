@@ -26,10 +26,6 @@ public class LookUpTable implements LUTInterface {
     private final int totalRoundNum = 4000;
     private final double alpha = 0.5;
     private final double gamma = 0.99;
-    private final double badReward = -0.01;
-    private final double goodReward = 0.01;
-    private final double badTerminal = -0.02;
-    private final double goodTerminal = 0.02;
 
     private double preAction = -1.0;
     private double[] preState = {-1.0, -1.0, -1.0, -1.0};
@@ -58,7 +54,7 @@ public class LookUpTable implements LUTInterface {
     }
 
     @Override
-    public double outputFor(double[] X) {
+    public double[] outputFor(double[] X) {
         int actionIndex = 0;
         int[] stateIndex = indexFor(X);
         double maxProbability = Double.MIN_VALUE;
@@ -72,28 +68,28 @@ public class LookUpTable implements LUTInterface {
             }
         }
         if (allZero) actionIndex = (int)Math.floor(Math.random()*variableDimension5);
-        return actionIndex;
+        return new double[]{actionIndex};
     }
 
     @Override
-    public double train(double[] X, double argValue) {
+    public double[] train(double[] X, double[] argValue) {
         double action;
-        double maxAction = outputFor(X);
+        double[] maxAction = outputFor(X);
 
         double random = Math.random();          // [0,1)
         if (random < epsilon)
             action = Math.floor(Math.random() * variableDimension5);
         else
-            action = maxAction;
+            action = maxAction[0];
 
         if (preAction >= 0)
-            update(X, 0, (int)maxAction);           // on-policy: update(X, 0, (int)action)
+            update(X, 0, (int)maxAction[0]);           // on-policy: update(X, 0, (int)action)
 
         preAction = action;
         preState = Arrays.copyOf(X, X.length);
         int[] stateIndex = indexFor(X);
         visits[stateIndex[0]][stateIndex[1]][stateIndex[2]][stateIndex[3]][(int)action]++;
-        return action;
+        return new double[]{action};
     }
 
     @Override
@@ -215,21 +211,7 @@ public class LookUpTable implements LUTInterface {
     public void win() {
         winsPerInterval++;
     }
-    public double getBadReward() {
-        return badReward;
-    }
 
-    public double getGoodReward() {
-        return goodReward;
-    }
-
-    public double getBadTerminal() {
-        return badTerminal;
-    }
-
-    public double getGoodTerminal() {
-        return goodTerminal;
-    }
 
     public RobocodeFileWriter getWriter() {
         return writer;

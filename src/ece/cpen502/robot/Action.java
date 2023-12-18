@@ -13,6 +13,9 @@ public class Action {
     private ActionLabel label;
 
 
+    /**
+     * perform actions
+     */
     public void doAction(MicroBot robot, ScannedRobotEvent event) {
         switch (label) {
             case CIRCLE:
@@ -42,12 +45,12 @@ public class Action {
             case RETREAT:
                 robot.setBack(300);
                 break;
-            // case STAY:
-            //     robot.doNothing();
-            //     break;
         }
     }
 
+    /**
+     * map index to action Enum
+     */
     public ActionLabel labelTransfer(double index) {
         if (index == 0.0) return ActionLabel.CIRCLE;
         else if (index == 1.0) return ActionLabel.ADVANCE;
@@ -55,10 +58,6 @@ public class Action {
         else if (index == 3.0) return ActionLabel.FIRE;
         else if (index == 4.0) return ActionLabel.RETREAT;
         else return null;
-    }
-
-    public ActionLabel getLabel() {
-        return label;
     }
 
     public void setLabel(ActionLabel label) {

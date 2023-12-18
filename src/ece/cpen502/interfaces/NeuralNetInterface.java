@@ -38,6 +38,6 @@ public interface NeuralNetInterface extends CommonInterface{
      * @param calculatedValue
      * @return 0.5* (y - c)^2
      */
-    double squareDifference(double actualValue, double calculatedValue);
+    double[] squareDifference(double[] actualValue, double[] calculatedValue);
 
 }

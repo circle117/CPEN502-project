@@ -70,15 +70,15 @@ public class BackPropagationMain {
         while (cnt<times) {
             List<Double> list = new ArrayList<>();
 
-            NeuralNet net = new NeuralNet(2, 4, 0.2, momentum,
-                    argA, argB);
+            NeuralNet net = new NeuralNet(2, 4, 1, 0.2, momentum,
+                    argA, argB, true);
 
             error = 1.0;
             epoch = 0;
             while (error >= 0.05) {
                 error = 0.0;
                 for (int i = 0; i < X.length; i++) {
-                    error += net.train(X[i], target[i]);
+                    error += net.train(X[i], new double[]{target[i]})[0];
                 }
                 epoch++;
                 if (ifRecord.equals("Y"))
@@ -97,8 +97,6 @@ public class BackPropagationMain {
         // record
         if (ifRecord.equals("Y")) {
             File file = new File("./data/result/"+inputFileName+"Loss-momentum"+momentum+".csv");
-            if (file.exists())
-                file.delete();
             writer = new FileWriter(file);
             writer.write("epoch");
             for (int i=1; i<=10; i++)

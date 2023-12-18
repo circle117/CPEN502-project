@@ -13,7 +13,7 @@ public interface CommonInterface {
      * @param X The input vector. An array of doubles.
      * @return The value returned by th LUT or NN for this input vector
      */
-    double outputFor(double [] X);
+    double[] outputFor(double[] X);
 
     /**
      * This method will tell the NN or the LUT the output
@@ -23,7 +23,7 @@ public interface CommonInterface {
      * @param argValue The new value to learn
      * @return The error in the output for that input vector
      */
-    double train(double [] X, double argValue);
+    double[] train(double[] X, double[] argValue);
 
     /**
      * A method to write either a LUT or weights of a neural net to a file
@@ -37,7 +37,6 @@ public interface CommonInterface {
      * You should raise an error in the case that an attempt is being
      * made to load data into an LUT or neural net whose structure does not match
      * the data in the file (e.g. wrong number of hidden neurons).
-     * @throws IOException
      */
     void load(String argFileName) throws IOException;
 }
