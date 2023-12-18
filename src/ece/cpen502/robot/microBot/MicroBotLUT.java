@@ -10,42 +10,32 @@ import java.io.IOException;
 
 public class MicroBotLUT extends MicroBot {
 
-    static private LookUpTable lookUpTable = new LookUpTable(State.EnergyLabel.values().length,
-            State.DistanceLabel.values().length,
-            State.EnergyLabel.values().length,
-            State.DistanceLabel.values().length,
-            Action.ActionLabel.values().length);
+    private double epsilon = 0.9;
+    private final static double epsilonInitial = 0.9;
+    private final int totalRoundNum = 2000;
+    private final double alpha = 0.5;
+    private final double gamma = 0.99;
+    private final boolean ifTrain = true;
 
-    private final boolean ifTrain = false;
-    private final String fileName = "/data-e0.9-round4000-alpha0.5-gamma0.99-LUT.csv";
 
+    static private LookUpTable lookUpTable;
+    public MicroBotLUT() {
+        super();
+        lookUpTable = new LookUpTable(State.EnergyLabel.values().length,
+                State.DistanceLabel.values().length,
+                State.EnergyLabel.values().length,
+                State.DistanceLabel.values().length,
+                Action.ActionLabel.values().length,
+                alpha, gamma);
+    }
+
+    @Override
     public void run() {
-        // robocode setting
-        setAdjustRadarForGunTurn(true);             // divorce radar movement from robot movement
-        setAdjustGunForRobotTurn(true);             // divorce gun movement from robot movement
-        enemy.reset();
-
-        if (ifTrain) {
-            if (lookUpTable.getWriter() == null) {
-                try {
-                    lookUpTable.setWriter(getDataDirectory());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        } else {
-            try {
-                lookUpTable.load(getDataDirectory().getPath()+fileName);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        // look up table setting
-        while(true) {
-            setTurnRadarRight(10000);
-            execute();
-        }
+        recordFileName = getDataDirectory() +
+                String.format("/data-e%.1f-round%d-alpha%.1f-gamma%.2f.csv", epsilon, totalRoundNum, alpha, gamma);
+        modelFileName = getDataDirectory() +
+                String.format("/lut-e%.1f-round%d-alpha%.1f-gamma%.2f.csv", epsilonInitial, totalRoundNum, alpha, gamma);
+        super.run();
     }
 
     @Override
@@ -55,7 +45,9 @@ public class MicroBotLUT extends MicroBot {
         if (enemy.none() | event.getName().equals(enemy.getName())) {
             enemy.update(event);
         }
+
         double[] index = state.indexForLUT(this, event);
+        if (lookUpTable.getPreAction()!=-1) rewards.add(reward);
 
         if (ifTrain) {
             try {
@@ -75,33 +67,12 @@ public class MicroBotLUT extends MicroBot {
         }
     }
 
-    @Override
-    public void onRobotDeath(RobotDeathEvent event) {
-        if (ifTrain) {
-            if (event.getName().equals(enemy.getName())) {
-                reward += goodTerminalReward;
-                lookUpTable.win();
-                enemy.reset();
-            }
-
-            try {
-                lookUpTable.terminalState(reward, getTime());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
 
     @Override
-    public void onDeath(DeathEvent event) {
-        if (ifTrain) {
-            reward += badTerminalReward;
-
-            try {
-                lookUpTable.terminalState(reward, getTime());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+    protected void terminal(double terminalReward) throws IOException {
+        lookUpTable.updateTerminal(terminalReward);
+        super.terminal(terminalReward);
+        lookUpTable.setEpsilon(epsilon);
+        lookUpTable.initializeStateAction();
     }
 }

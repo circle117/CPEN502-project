@@ -6,21 +6,18 @@ import ece.cpen502.ReplayMemory.ReplayMemory;
 import ece.cpen502.robot.Action;
 import robocode.*;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 
 public class MicroBotNN extends MicroBot {
 
     // hyper parameter
-    private final static double epsilonInitial = 0.6;
     private static double epsilon = 0.6;
-    private final double epsilonDecay;
+    private final static double epsilonInitial = 0.6;
+
     private final int totalRoundNum = 800;
     private final double gamma = 0.99;
     private final int memSize = 200;
     private final int batchSize = 200;
-    private final static String NNFileName = "/online-weights-round%d-epsilon%.1f-gamma%.2f-memSize%d-batchSize%d.csv";
     private final boolean ifTrain = true;
 
     // NN
@@ -30,46 +27,24 @@ public class MicroBotNN extends MicroBot {
     private Experience preExperience;
 
     // for records
-    private static int roundNum = 0;
-    private final int recordInterval = 25;
-    private static int winsPerInterval = 0;
-    private static ArrayList<Double> rewards = new ArrayList<>();
-    private static ArrayList<Long> timeEveryRound = new ArrayList<>();
-    private static ArrayList<Double> errors = new ArrayList<>();
-    private final String recordFileName = "/online-round%d-epsilon%.1f-gamma%.2f-memSize%d-batchSize%d.csv";
-    private static RobocodeFileWriter writer;
+    private final static String NNFileFormat = "/online-weights-round%d-epsilon%.1f-gamma%.2f-memSize%d-batchSize%d.csv";
+    private final static String recordFileFormat = "/online-round%d-epsilon%.1f-gamma%.2f-memSize%d-batchSize%d.csv";
 
 
     public MicroBotNN() {
-        epsilonDecay = epsilonInitial/(totalRoundNum * 0.8);
+        super();
+        model = new NeuralNet(4, 10, 5,
+                0.1, 0.9, 0, 1, false);
         memory = new ReplayMemory<>(memSize);
     }
 
+    @Override
     public void run() {
-        try {
-            if (ifTrain && writer == null) {
-                writer = new RobocodeFileWriter(getDataDirectory() +
-                        String.format(recordFileName, totalRoundNum, epsilon, gamma, memSize, batchSize));
-                writer.write(String.join(",",
-                        "RoundNumber", "winsPer50", "epsilon", "error",  "meanTotalReward", "meanTime\n"));
-            } else if (!ifTrain){
-                // load weights
-                net.load(getDataDirectory().getPath() + String.format(NNFileName, totalRoundNum,
-                        epsilon, gamma, memSize, batchSize));
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-
-        setAdjustRadarForGunTurn(true);             // divorce radar movement from robot movement
-        setAdjustGunForRobotTurn(true);             // divorce gun movement from robot movement
-        enemy.reset();
-
-        while(true) {
-            setTurnRadarRight(10000);
-            execute();
-        }
+        recordFileName = getDataDirectory() +
+                String.format(recordFileFormat, totalRoundNum, epsilonInitial, gamma, memSize, batchSize);
+        modelFileName = getDataDirectory() +
+                String.format(NNFileFormat, totalRoundNum, epsilonInitial, gamma, memSize, batchSize);
+        super.run();
     }
 
     @Override
@@ -94,6 +69,7 @@ public class MicroBotNN extends MicroBot {
             preExperience.reward = reward;
             reward = 0;
             memory.add(preExperience);
+            rewards.add(reward);
         }
 
         double[] qValues;
@@ -127,86 +103,11 @@ public class MicroBotNN extends MicroBot {
         }
     }
 
-    @Override
-    public void onRobotDeath(RobotDeathEvent event) {
-        if (ifTrain) {
-            winsPerInterval++;
-            try {
-                terminal(goodTerminalReward);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    @Override
-    public void onDeath(DeathEvent event) {
-        if (ifTrain) {
-            try {
-                terminal(badTerminalReward);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private double findMaxAction(double[] qValues) {
-        double maxValue = Double.MIN_VALUE;
-        double maxAction = 0;
-        for (int i = 0; i < Action.ActionLabel.values().length; i++) {
-            if (qValues[i] > maxValue) {
-                maxValue = qValues[i];
-                maxAction = i;
-            }
-        }
-        return maxAction;
-    }
-
-    private void terminal(double terminalReward) throws IOException {
+    protected void terminal(double terminalReward) throws IOException {
         reward += terminalReward;
         preExperience.reward = reward;
         memory.add(preExperience);
-
-        roundNum++;
-        timeEveryRound.add(getTime());
-        rewards.add(reward);
-        if (ifTrain && roundNum % recordInterval == 0) {
-            double meanError = 0;
-            for (double element: errors)
-                meanError += element;
-            meanError /= errors.size();
-
-            double meanReward = 0;
-            for (double element: rewards)
-                meanReward += element;
-            meanReward /= rewards.size();
-
-            long meanTime = 0;
-            for (long element: timeEveryRound)
-                meanTime += element;
-            meanTime /= timeEveryRound.size();
-
-            writer.write(String.join(",",
-                    String.valueOf(roundNum), String.valueOf(winsPerInterval*1.0/recordInterval),
-                    String.valueOf(epsilon), String.valueOf(meanError),
-                    String.valueOf(meanReward), meanTime + "\n"));
-            rewards = new ArrayList<>();
-            winsPerInterval = 0;
-        }
-
-        if (roundNum == totalRoundNum) {
-            writer.close();
-            net.save(new File(getDataDirectory() + String.format(NNFileName, totalRoundNum,
-                    epsilonInitial, gamma, memSize, batchSize)));
-        }
-
-        if (epsilon > 0) {
-            epsilon -= epsilonDecay;
-            if (epsilon <= 0)
-                epsilon = 0.0;
-        }
-
         preExperience = null;
-        reward = 0;
+        super.terminal(terminalReward);
     }
 }

@@ -21,36 +21,23 @@ public class LookUpTable implements LUTInterface {
 
 
     // hyper parameter
-    private double epsilon = 0.9;                   // for exploration
-    private final double epsilonDecay;
-    private final int totalRoundNum = 4000;
-    private final double alpha = 0.5;
-    private final double gamma = 0.99;
-
+    private final double alpha;
+    private final double gamma;
+    private double epsilon;
     private double preAction = -1.0;
     private double[] preState = {-1.0, -1.0, -1.0, -1.0};
 
-    // For recording
-    private int roundNum = 0;
-    private final int recordInterval = 50;
-    private int winsPerInterval = 0;
-    private ArrayList<Double> rewards = new ArrayList<>();
-    private ArrayList<Long> timeEveryRound = new ArrayList<>();
-    private File robotFile;
-    private final String recordFileName;
-    private RobocodeFileWriter writer;
-
-
     public LookUpTable(int variableDimension1, int variableDimension2, int variableDimension3,
-                       int variableDimension4, int variableDimension5) {
+                       int variableDimension4, int variableDimension5,
+                       double alpha, double gamma) {
         this.variableDimension1 = variableDimension1;
         this.variableDimension2 = variableDimension2;
         this.variableDimension3 = variableDimension3;
         this.variableDimension4 = variableDimension4;
         this.variableDimension5 = variableDimension5;
+        this.alpha = alpha;
+        this.gamma = gamma;
         initializeLUT();
-        epsilonDecay = epsilon/(totalRoundNum * 0.8);
-        recordFileName = String.format("data-e%.1f-round%d-alpha%.1f-gamma%.2f.csv", epsilon, totalRoundNum, alpha, gamma);
     }
 
     @Override
@@ -94,8 +81,7 @@ public class LookUpTable implements LUTInterface {
 
     @Override
     public void save(File argFile) throws IOException {
-        RobocodeFileWriter writerSave = new RobocodeFileWriter(argFile.getPath() +
-                "/"+ recordFileName.substring(0, recordFileName.length()-4) + "-" +"LUT.csv");
+        RobocodeFileWriter writerSave = new RobocodeFileWriter(argFile);
         writerSave.write(String.join(",",
                 "State-1", "State-2", "State-3", "State-4", "Action", "value", "visitTimes\n"));
         for (int i=0; i< lookUpTable.length; i++)
@@ -109,8 +95,6 @@ public class LookUpTable implements LUTInterface {
                                     String.valueOf(lookUpTable[i][j][k][l][m]),
                                     visits[i][j][k][l][m]+"\n"));
         writerSave.close();
-        System.out.println("save to "+ argFile.getPath() +
-                "/"+ recordFileName.substring(0, recordFileName.length()-4) + "-" +"LUT.csv");
     }
 
     @Override
@@ -147,15 +131,7 @@ public class LookUpTable implements LUTInterface {
         return stateIndex;
     }
 
-    public void setWriter(File file) throws IOException {
-        robotFile = file;
-        writer = new RobocodeFileWriter(new File(robotFile.getPath()+"/"+recordFileName));
-        writer.write(String.join(",",
-                "totalRoundNumber", "winsPer50", "epsilon", "meanTotalReward", "meanTime\n"));
-    }
-
     public void update(double[] X, double reward, int newAction) {
-        rewards.add(reward);
 
         int[] newStateIndex = indexFor(X);
         int[] preStateIndex = indexFor(preState);
@@ -165,55 +141,23 @@ public class LookUpTable implements LUTInterface {
                 alpha * (reward + gamma * newQ - oldQ);
     }
 
-    public void terminalState(double reward, long time) throws IOException {
-        roundNum++;
-        timeEveryRound.add(time);
-        rewards.add(reward);
-        if (roundNum % recordInterval == 0) {
-            double mean = 0;
-            for (double element: rewards)
-                mean += element;
-            mean /= rewards.size();
 
-            long meanTime = 0;
-            for (long element: timeEveryRound)
-                meanTime += element;
-            meanTime /= timeEveryRound.size();
-            writer.write(String.join(",",
-                    String.valueOf(roundNum), String.valueOf(winsPerInterval*1.0/recordInterval),
-                    String.valueOf(epsilon), String.valueOf(mean), meanTime + "\n"));
-            rewards = new ArrayList<>();
-            winsPerInterval = 0;
-        }
-
-        if (roundNum == totalRoundNum) {
-            writer.close();
-            roundNum = 0;
-            save(robotFile);
-        }
-        if (epsilon > 0) {
-            epsilon -= epsilonDecay;
-            if (epsilon <= 0)
-                epsilon = 0.0;
-        }
-
+    public void updateTerminal(double reward){
         int[] preStateIndex = indexFor(preState);
         lookUpTable[preStateIndex[0]][preStateIndex[1]][preStateIndex[2]][preStateIndex[3]][(int)preAction] +=
                 alpha * reward;
-        initializePreviousIndex();
     }
 
-    public void initializePreviousIndex() {
+    public void setEpsilon(double epsilon) {
+        this.epsilon = epsilon;
+    }
+
+    public void initializeStateAction() {
         Arrays.fill(preState, -0.1);
         preAction = -0.1;
     }
 
-    public void win() {
-        winsPerInterval++;
-    }
-
-
-    public RobocodeFileWriter getWriter() {
-        return writer;
+    public double getPreAction() {
+        return preAction;
     }
 }
